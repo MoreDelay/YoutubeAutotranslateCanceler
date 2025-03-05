@@ -1,13 +1,12 @@
 // ==UserScript==
 // @name         Youtube Auto-translate Canceler
 // @namespace    https://github.com/pcouy/YoutubeAutotranslateCanceler/
-// @version      0.4
+// @version      0.5
 // @description  Remove auto-translated youtube titles
 // @author       Pierre Couy
 // @match        https://www.youtube.com/*
 // @grant        GM.setValue
 // @grant        GM.getValue
-// @grant        GM.deleteValue
 // @require      https://cdn.jsdelivr.net/npm/dompurify@3.2.4/dist/purify.min.js
 // ==/UserScript==
 
@@ -102,10 +101,10 @@
                         console.log ("YouTube was too slow again...");
                     }
                     if (cachedTitles[curID]) {
-                        var originalTitle = cachedTitles[curID];
+                        const originalTitle = cachedTitles[curID];
                         const linkEl = links[i].querySelector('#video-title') || links[i]
-                        var pageTitle = linkEl.innerText.trim();
-                        if(pageTitle != originalTitle.replace(/\s{2,}/g, ' '))
+                        const pageTitle = linkEl.innerText.trim();
+                        if (pageTitle !== originalTitle.replace(/\s{2,}/g, ' ') && pageTitle !== originalTitle)
                         {
                             console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
                             linkEl.innerText = originalTitle;

@@ -73,47 +73,6 @@
         const APIFetchIDs = IDs.filter(id => !cachedTitles[id] || !cachedDescriptions[id]).slice(0, 30);
 
         if (links.length > 0) {
-            function updateDom() {
-                if (mainVidID != "" && location.href.includes("/watch?v="))
-                {
-                    // Replace Main Video title
-                    const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
-                    const untranslatedTitle = cachedTitles[mainVidID]
-                    if (mainTitle && untranslatedTitle && (mainTitle.innerText !== untranslatedTitle || mainTitle.getAttribute('is-empty') !== null)) {
-                        mainTitle.innerText = untranslatedTitle
-                        mainTitle.title = untranslatedTitle
-                        mainTitle.removeAttribute('is-empty')
-                        document.title = `${untranslatedTitle} - YouTube`
-                    }
-                    // Replace Main Video Description
-                    const videoDescription = cachedDescriptions[mainVidID];
-                    const pageDescription = document.querySelector('#description-inline-expander yt-attributed-string > span')
-                    // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
-                    if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
-                        pageDescription.innerHTML = videoDescription;
-                    }
-                }
-
-                // Change all previously found link elements
-                for(let i = 0; i < links.length; i++){
-                    const curID = getVideoID(links[i]);
-                    if (curID !== IDs[i]) { // Can happen when Youtube was still loading when script was invoked
-                        console.log ("YouTube was too slow again...");
-                    }
-                    if (cachedTitles[curID]) {
-                        const originalTitle = cachedTitles[curID];
-                        const linkEl = links[i].querySelector('#video-title') || links[i]
-                        const pageTitle = linkEl.innerText.trim();
-                        if (pageTitle !== originalTitle.replace(/\s{2,}/g, ' ') && pageTitle !== originalTitle)
-                        {
-                            console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
-                            linkEl.innerText = originalTitle;
-                            linkEl.title = originalTitle;
-                        }
-                    }
-                }
-            }
-
             if (APIFetchIDs.length > 0) {
                 var requestUrl = url_template.replace("{IDs}", APIFetchIDs.join(','));
 
@@ -146,7 +105,46 @@
                     }
                 }
             }
-            updateDom()
+
+            // Begin to update the DOM
+            if (mainVidID != "" && location.href.includes("/watch?v="))
+            {
+                // Replace Main Video title
+                const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
+                const untranslatedTitle = cachedTitles[mainVidID]
+                if (mainTitle && untranslatedTitle && (mainTitle.innerText !== untranslatedTitle || mainTitle.getAttribute('is-empty') !== null)) {
+                    mainTitle.innerText = untranslatedTitle
+                    mainTitle.title = untranslatedTitle
+                    mainTitle.removeAttribute('is-empty')
+                    document.title = `${untranslatedTitle} - YouTube`
+                    }
+                    // Replace Main Video Description
+                    const videoDescription = cachedDescriptions[mainVidID];
+                    const pageDescription = document.querySelector('#description-inline-expander yt-attributed-string > span')
+                    // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
+                    if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
+                        pageDescription.innerHTML = videoDescription;
+                    }
+                }
+
+            // Change all previously found link elements
+            for(let i = 0; i < links.length; i++){
+                const curID = getVideoID(links[i]);
+                if (curID !== IDs[i]) { // Can happen when Youtube was still loading when script was invoked
+                    console.log ("YouTube was too slow again...");
+                }
+                if (cachedTitles[curID]) {
+                    const originalTitle = cachedTitles[curID];
+                    const linkEl = links[i].querySelector('#video-title') || links[i]
+                    const pageTitle = linkEl.innerText.trim();
+                    if (pageTitle !== originalTitle.replace(/\s{2,}/g, ' ') && pageTitle !== originalTitle)
+                    {
+                        console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
+                        linkEl.innerText = originalTitle;
+                        linkEl.title = originalTitle;
+                    }
+                }
+            }
         }
     }
 

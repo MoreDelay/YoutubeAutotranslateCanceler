@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         Youtube Auto-translate Canceler
-// @namespace    https://github.com/pcouy/YoutubeAutotranslateCanceler/
+// @namespace    https://github.com/ibnunes/YoutubeAutotranslateCanceler
 // @version      0.5
 // @description  Remove auto-translated youtube titles
 // @author       Pierre Couy
@@ -25,11 +25,12 @@
     api_key_awaited = await GM.getValue("api_key");
     if(api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === ""){
         NO_API_KEY = true; // Resets after page reload, still allows local title to be replaced
-        console.log("NO API KEY PRESENT");
+        console.log("Youtube Auto-translate Canceler: NO API KEY PRESENT");
     }
     const API_KEY = await GM.getValue("api_key");
     var API_KEY_VALID = false;
-    console.log(API_KEY);
+    // console.log(API_KEY);
+    console.log("Youtube Auto-translate Canceler: Got API key");
 
     var url_template = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
 
@@ -42,9 +43,13 @@
         while(a.tagName != "A"){
             a = a.parentNode;
         }
-        var href = a.href;
-        var tmp = href.split('v=')[1];
-        return tmp.split('&')[0];
+      	if (!a || !a.href) return null;
+      	const match = a.href.match(/v=([^&]+)/);
+      	return match ? match[1] : null;
+        
+      	// var href = a.href;
+        // var tmp = href.split('v=')[1];
+        // return tmp.split('&')[0];
     }
 
     async function changeTitles() {
@@ -61,7 +66,11 @@
             && !a.className.includes("-radio-")
             && !a.className.includes("-playlist-");
         } );
+      	let homepageTitles = Array.from(document.querySelectorAll('a.yt-lockup-metadata-view-model-wiz__title')).filter(a => {
+    				return a.querySelector('.yt-core-attributed-string');
+				});
         links = links.concat(spans);
+        links = links.concat(homepageTitles);
 
         // MAIN VIDEO DESCRIPTION - request to load original video description
         var mainVidID = "";
@@ -135,12 +144,12 @@
                 }
                 if (cachedTitles[curID]) {
                     const originalTitle = cachedTitles[curID];
-                    const linkEl = links[i].querySelector('#video-title') || links[i]
+                    const linkEl = links[i].querySelector('#video-title, .yt-core-attribute-string') || links[i]
                     const pageTitle = linkEl.innerText.trim();
                     if (pageTitle !== originalTitle.replace(/\s{2,}/g, ' ') && pageTitle !== originalTitle)
                     {
                         console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
-                        linkEl.innerText = originalTitle;
+                        linkEl.textContent = originalTitle;
                         linkEl.title = originalTitle;
                     }
                 }
@@ -174,6 +183,7 @@
             await changeTitles()
         } catch {}
 
-        await new Promise((r) => setTimeout(r))
+        await new Promise((r) => setTimeout(r, 1000))
     }
 })();
+

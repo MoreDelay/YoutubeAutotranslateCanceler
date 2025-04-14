@@ -39,25 +39,16 @@
 
 
     function getVideoID(a)
-{
+    {
         while(a.tagName != "A"){
             a = a.parentNode;
         }
         if (!a || !a.href) return null;
         const match = a.href.match(/v=([^&]+)/);
         return match ? match[1] : null;
-
-        // var href = a.href;
-        // var tmp = href.split('v=')[1];
-        // return tmp.split('&')[0];
     }
 
-    async function changeTitles() {
-        if (NO_API_KEY) {
-            return;
-        }
-
-        // REFERENCED VIDEO TITLES - find video link elements in the page that have not yet been changed
+    function collectVideoElements() {
         var links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter( a => {
             return a.querySelector('#video-title') || a.id === 'video-title'
         } );
@@ -66,97 +57,123 @@
                 && !a.className.includes("-radio-")
                 && !a.className.includes("-playlist-");
         } );
-        var homepageTitles = Array.from(document.querySelectorAll('a[href*="/watch"] span[role="text"]')).filter(a => {
-            return a.textContent?.trim().length > 0;
-        });
+        var homepageTitles = Array
+            .from(document.querySelectorAll('a[href*="/watch"] span[role="text"]'))
+            .filter(a => { return a.textContent?.trim().length > 0; });
         links = links.concat(spans);
         links = links.concat(homepageTitles);
+        return links;
+    }
+
+    function getMainVideoID() {
+        if (!window.location.href.includes("/watch")) return "";
+        return window.location.href.split('v=')[1].split('&')[0];
+    }
+
+    async function fetchVideoData(videoIDs) {
+        var requestUrl = url_template.replace("{IDs}", videoIDs.join(','));
+
+        // Issue API request
+        const data = await fetch(requestUrl).then((r) => r.json());
+        if(data.kind == "youtube#videoListResponse") {
+            API_KEY_VALID = true;
+
+            // Create dictionary for all IDs and their original titles
+            for (const v of data.items) {
+                cachedTitles[v.id] = v.snippet.title;
+                cachedDescriptions[v.id] = DOMPurify.sanitize(linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
+            }
+        }
+        else {
+            console.log("API Request Failed!", requestUrl, data);
+
+            // This ensures that occasional fails don't stall the script
+            // But if the first query is a fail then it won't try repeatedly
+            NO_API_KEY = !API_KEY_VALID;
+            if (NO_API_KEY) {
+                console.log("API Key Fail! Please Reload!");
+            }
+        }
+    }
+
+    function updateMainVideo(mainVidID) {
+        // Replace Main Video title
+        const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
+        const untranslatedTitle = cachedTitles[mainVidID]
+        if (mainTitle
+            && untranslatedTitle
+            && (mainTitle.innerText !== untranslatedTitle
+                || mainTitle.getAttribute('is-empty') !== null)) {
+            mainTitle.innerText = untranslatedTitle
+            mainTitle.title = untranslatedTitle
+            mainTitle.removeAttribute('is-empty')
+            document.title = `${untranslatedTitle} - YouTube`
+        }
+
+        // Replace Main Video Description
+        const videoDescription = cachedDescriptions[mainVidID];
+        const pageDescription = document
+            .querySelector('#description-inline-expander yt-attributed-string > span')
+        // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
+        if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
+            pageDescription.innerHTML = videoDescription;
+        }
+    }
+
+    function updateAllLinkTitles(links, IDs) {
+        // Change all previously found link elements
+        for(let i = 0; i < links.length; i++) {
+            const curID = getVideoID(links[i]);
+            if (!curID) continue;
+
+            if (curID !== IDs[i]) {
+                // Can happen when Youtube was still loading when script was invoked
+                console.log ("YouTube was too slow again...");
+                continue;
+            }
+
+            const originalTitle = cachedTitles[curID];
+            if (!originalTitle) continue;
+
+            const linkEl = links[i].querySelector('#video-title') || links[i]
+            const pageTitle = linkEl.innerText.trim();
+
+            if (pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
+                || pageTitle === originalTitle) continue;
+
+            console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
+            linkEl.textContent = originalTitle;
+            linkEl.title = originalTitle;
+        }
+    }
+
+    async function changeTitles() {
+        if (NO_API_KEY) return;
+
+        // REFERENCED VIDEO TITLES - find video link elements in the page that have not yet been changed
+        const links = collectVideoElements();
 
         // MAIN VIDEO DESCRIPTION - request to load original video description
-        var mainVidID = "";
-        if (window.location.href.includes("/watch")){
-            mainVidID = window.location.href.split('v=')[1].split('&')[0];
-        }
+        const mainVidID = getMainVideoID();
 
         const IDs = [...links.map( a => getVideoID(a)), ...(mainVidID ? [mainVidID] : [])];
-        const APIFetchIDs = IDs.filter(id => !cachedTitles[id] || !cachedDescriptions[id]).slice(0, 30);
+        const APIFetchIDs = IDs
+            .filter(id => !cachedTitles[id] || !cachedDescriptions[id])
+            .slice(0, 30);
 
-        if (links.length > 0) {
-            if (APIFetchIDs.length > 0) {
-                var requestUrl = url_template.replace("{IDs}", APIFetchIDs.join(','));
+        if (links.length == 0) return;
 
-                // Issue API request
-                const data = await fetch(requestUrl).then((r) => r.json());
-                if(data.kind == "youtube#videoListResponse")
-            {
-                    API_KEY_VALID = true;
-
-                    const items = data.items;
-
-                    // Create dictionary for all IDs and their original titles
-                    items.forEach(v => {
-                        cachedTitles[v.id] = v.snippet.title;
-                        cachedDescriptions[v.id] = DOMPurify.sanitize(linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
-                    });
-                }
-                else
-            {
-                    console.log("API Request Failed!");
-                    console.log(requestUrl);
-                    console.log(data);
-
-                    // This ensures that occasional fails don't stall the script
-                    // But if the first query is a fail then it won't try repeatedly
-                    NO_API_KEY = !API_KEY_VALID;
-                    if (NO_API_KEY) {
-                        GM_setValue('api_key', '');
-                        console.log("API Key Fail! Please Reload!");
-                    }
-                }
-            }
-
-            // Begin to update the DOM
-            if (mainVidID != "" && location.href.includes("/watch?v="))
-        {
-                // Replace Main Video title
-                const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
-                const untranslatedTitle = cachedTitles[mainVidID]
-                if (mainTitle && untranslatedTitle && (mainTitle.innerText !== untranslatedTitle || mainTitle.getAttribute('is-empty') !== null)) {
-                    mainTitle.innerText = untranslatedTitle
-                    mainTitle.title = untranslatedTitle
-                    mainTitle.removeAttribute('is-empty')
-                    document.title = `${untranslatedTitle} - YouTube`
-                }
-                // Replace Main Video Description
-                const videoDescription = cachedDescriptions[mainVidID];
-                const pageDescription = document.querySelector('#description-inline-expander yt-attributed-string > span')
-                // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
-                if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
-                    pageDescription.innerHTML = videoDescription;
-                }
-            }
-
-            // Change all previously found link elements
-            for(let i = 0; i < links.length; i++){
-                const curID = getVideoID(links[i]);
-                if (!curID) continue;
-
-                if (curID !== IDs[i]) { // Can happen when Youtube was still loading when script was invoked
-                    console.log ("YouTube was too slow again...");
-                }
-
-                const originalTitle = cachedTitles[curID];
-                const linkEl = links[i].querySelector('#video-title') || links[i]
-                const pageTitle = linkEl.innerText.trim();
-
-                if (originalTitle && pageTitle !== originalTitle.replace(/\s{2,}/g, ' ')
-                    && pageTitle !== originalTitle) {
-                    console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
-                    linkEl.textContent = originalTitle;
-                    linkEl.title = originalTitle;
-                }
-            }
+        if (APIFetchIDs.length > 0) {
+            await fetchVideoData(APIFetchIDs);
         }
+
+        // Begin to update the DOM
+        if (mainVidID && location.href.includes("/watch?v=")) {
+            updateMainVideo(mainVidID);
+        }
+
+        updateAllLinkTitles(links, IDs);
+
     }
 
     // linkify replaces links correctly, but without redirect or other specific youtube stuff (no problem if missing)

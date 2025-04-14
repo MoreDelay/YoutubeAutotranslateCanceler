@@ -18,12 +18,12 @@
     */
     let NO_API_KEY = false;
     let api_key_awaited = await GM.getValue("api_key");
-    if(api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === ""){
+    if (api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === "") {
         await GM.setValue("api_key", prompt("Enter your API key. Go to https://developers.google.com/youtube/v3/getting-started to know how to obtain an API key, then go to https://console.developers.google.com/apis/api/youtube.googleapis.com/ in order to enable Youtube Data API for your key."));
     }
 
     api_key_awaited = await GM.getValue("api_key");
-    if(api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === ""){
+    if (api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === "") {
         NO_API_KEY = true; // Resets after page reload, still allows local title to be replaced
         console.log("Youtube Auto-translate Canceler: NO API KEY PRESENT");
     }
@@ -32,15 +32,16 @@
     // console.log(API_KEY);
     console.log("Youtube Auto-translate Canceler: Got API key");
 
-    let url_template = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
+    const URL_TEMPLATE = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
 
-    let cachedTitles = {} // Dictionary(id, title): Cache of API fetches, survives only Youtube Autoplay
-    let cachedDescriptions = {} // (id, desc linkified TrustedHTML)
+    // Dictionary(id, title): Cache of API fetches, survives only Youtube Autoplay
+    let cachedTitles = {}
+    // (id, desc linkified TrustedHTML)
+    let cachedDescriptions = {}
 
 
-    function getVideoID(a)
-    {
-        while(a.tagName != "A"){
+    function getVideoID(a) {
+        while (a.tagName != "A") {
             a = a.parentNode;
         }
         if (!a || !a.href) return null;
@@ -49,14 +50,14 @@
     }
 
     function collectVideoElements() {
-        let links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter( a => {
+        let links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter(a => {
             return a.querySelector('#video-title') || a.id === 'video-title'
-        } );
-        let spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter( a => {
+        });
+        let spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter(a => {
             return a.id == 'video-title'
                 && !a.className.includes("-radio-")
                 && !a.className.includes("-playlist-");
-        } );
+        });
         let homepageTitles = Array
             .from(document.querySelectorAll('a[href*="/watch"] span[role="text"]'))
             .filter(a => { return a.textContent?.trim().length > 0; });
@@ -66,25 +67,25 @@
     }
 
     function getMainVideoID() {
-        if (!window.location.href.includes("/watch")) return "";
-        return window.location.href.split('v=')[1].split('&')[0];
+        const url = new URL(window.location.href);
+        if (!url.pathname.includes("/watch")) return "";
+        return url.searchParams.get('v') || "";
     }
 
     async function fetchVideoData(videoIDs) {
-        let requestUrl = url_template.replace("{IDs}", videoIDs.join(','));
+        if (videoIDs.length === 0) return;
+
+        const requestUrl = URL_TEMPLATE.replace("{IDs}", videoIDs.join(','));
 
         // Issue API request
-        const data = await fetch(requestUrl).then((r) => r.json());
-        if(data.kind == "youtube#videoListResponse") {
-            API_KEY_VALID = true;
-
-            // Create dictionary for all IDs and their original titles
-            for (const v of data.items) {
-                cachedTitles[v.id] = v.snippet.title;
-                cachedDescriptions[v.id] = DOMPurify.sanitize(linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
-            }
+        let data;
+        try {
+            data = await fetch(requestUrl).then((r) => r.json());
+        } catch (err) {
+            console.log("Exception while fetching:", err);
         }
-        else {
+
+        if (!data || data.kind !== "youtube#videoListResponse") {
             console.log("API Request Failed!", requestUrl, data);
 
             // This ensures that occasional fails don't stall the script
@@ -94,9 +95,19 @@
                 console.log("API Key Fail! Please Reload!");
             }
         }
+        API_KEY_VALID = true;
+
+        // Create dictionary for all IDs and their original titles
+        for (const v of data.items) {
+            cachedTitles[v.id] = v.snippet.title;
+            cachedDescriptions[v.id] = DOMPurify.sanitize(
+                linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
+        }
     }
 
     function updateMainVideo(mainVidID) {
+        if (!mainVidID || !location.href.includes("/watch?v=")) return;
+
         // Replace Main Video title
         const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
         const untranslatedTitle = cachedTitles[mainVidID]
@@ -122,13 +133,13 @@
 
     function updateAllLinkTitles(links, IDs) {
         // Change all previously found link elements
-        for(let i = 0; i < links.length; i++) {
+        for (let i = 0; i < links.length; i++) {
             const curID = getVideoID(links[i]);
             if (!curID) continue;
 
             if (curID !== IDs[i]) {
                 // Can happen when Youtube was still loading when script was invoked
-                console.log ("YouTube was too slow again...");
+                console.log("YouTube was too slow again...");
                 continue;
             }
 
@@ -141,7 +152,7 @@
             if (pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
                 || pageTitle === originalTitle) continue;
 
-            console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
+            console.log("'" + pageTitle + "' --> '" + originalTitle + "'");
             linkEl.textContent = originalTitle;
             linkEl.title = originalTitle;
         }
@@ -150,33 +161,25 @@
     async function changeTitles() {
         if (NO_API_KEY) return;
 
-        // REFERENCED VIDEO TITLES - find video link elements in the page that have not yet been changed
         const links = collectVideoElements();
-
-        // MAIN VIDEO DESCRIPTION - request to load original video description
         const mainVidID = getMainVideoID();
 
-        const IDs = [...links.map( a => getVideoID(a)), ...(mainVidID ? [mainVidID] : [])];
+        const IDs = [...links.map(a => getVideoID(a)), ...(mainVidID ? [mainVidID] : [])];
         const APIFetchIDs = IDs
             .filter(id => !cachedTitles[id] || !cachedDescriptions[id])
             .slice(0, 30);
 
         if (links.length == 0) return;
 
-        if (APIFetchIDs.length > 0) {
-            await fetchVideoData(APIFetchIDs);
-        }
+        await fetchVideoData(APIFetchIDs);
 
         // Begin to update the DOM
-        if (mainVidID && location.href.includes("/watch?v=")) {
-            updateMainVideo(mainVidID);
-        }
-
+        updateMainVideo(mainVidID);
         updateAllLinkTitles(links, IDs);
-
     }
 
-    // linkify replaces links correctly, but without redirect or other specific youtube stuff (no problem if missing)
+    // linkify replaces links correctly, but without redirect or other specific youtube
+    // stuff (no problem if missing)
     function linkify(inputText) {
         let replacedText, replacePattern1, replacePattern2, replacePattern3;
 
@@ -198,7 +201,7 @@
     }
 
     const observer = new MutationObserver(() => {
-        changeTitles().catch(() => {})
+        changeTitles().catch(() => { })
     });
 
     observer.observe(document.body, {

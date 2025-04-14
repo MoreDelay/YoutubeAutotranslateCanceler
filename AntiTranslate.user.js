@@ -39,15 +39,15 @@
 
 
     function getVideoID(a)
-    {
+{
         while(a.tagName != "A"){
             a = a.parentNode;
         }
-      	if (!a || !a.href) return null;
-      	const match = a.href.match(/v=([^&]+)/);
-      	return match ? match[1] : null;
-        
-      	// var href = a.href;
+        if (!a || !a.href) return null;
+        const match = a.href.match(/v=([^&]+)/);
+        return match ? match[1] : null;
+
+        // var href = a.href;
         // var tmp = href.split('v=')[1];
         // return tmp.split('&')[0];
     }
@@ -63,12 +63,12 @@
         } );
         var spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter( a => {
             return a.id == 'video-title'
-            && !a.className.includes("-radio-")
-            && !a.className.includes("-playlist-");
+                && !a.className.includes("-radio-")
+                && !a.className.includes("-playlist-");
         } );
-      	let homepageTitles = Array.from(document.querySelectorAll('a.yt-lockup-metadata-view-model-wiz__title')).filter(a => {
-    				return a.querySelector('.yt-core-attributed-string');
-				});
+        var homepageTitles = Array.from(document.querySelectorAll('a[href*="/watch"] span[role="text"]')).filter(a => {
+            return a.textContent?.trim().length > 0;
+        });
         links = links.concat(spans);
         links = links.concat(homepageTitles);
 
@@ -88,7 +88,7 @@
                 // Issue API request
                 const data = await fetch(requestUrl).then((r) => r.json());
                 if(data.kind == "youtube#videoListResponse")
-                {
+            {
                     API_KEY_VALID = true;
 
                     const items = data.items;
@@ -100,7 +100,7 @@
                     });
                 }
                 else
-                {
+            {
                     console.log("API Request Failed!");
                     console.log(requestUrl);
                     console.log(data);
@@ -117,7 +117,7 @@
 
             // Begin to update the DOM
             if (mainVidID != "" && location.href.includes("/watch?v="))
-            {
+        {
                 // Replace Main Video title
                 const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
                 const untranslatedTitle = cachedTitles[mainVidID]
@@ -126,32 +126,34 @@
                     mainTitle.title = untranslatedTitle
                     mainTitle.removeAttribute('is-empty')
                     document.title = `${untranslatedTitle} - YouTube`
-                    }
-                    // Replace Main Video Description
-                    const videoDescription = cachedDescriptions[mainVidID];
-                    const pageDescription = document.querySelector('#description-inline-expander yt-attributed-string > span')
-                    // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
-                    if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
-                        pageDescription.innerHTML = videoDescription;
-                    }
                 }
+                // Replace Main Video Description
+                const videoDescription = cachedDescriptions[mainVidID];
+                const pageDescription = document.querySelector('#description-inline-expander yt-attributed-string > span')
+                // Still critical, since it replaces ALL descriptions, even if it was not translated in the first place (no easy comparision possible)
+                if (videoDescription && pageDescription.innerHTML !== videoDescription.toString()) {
+                    pageDescription.innerHTML = videoDescription;
+                }
+            }
 
             // Change all previously found link elements
             for(let i = 0; i < links.length; i++){
                 const curID = getVideoID(links[i]);
+                if (!curID) continue;
+
                 if (curID !== IDs[i]) { // Can happen when Youtube was still loading when script was invoked
                     console.log ("YouTube was too slow again...");
                 }
-                if (cachedTitles[curID]) {
-                    const originalTitle = cachedTitles[curID];
-                    const linkEl = links[i].querySelector('#video-title, .yt-core-attribute-string') || links[i]
-                    const pageTitle = linkEl.innerText.trim();
-                    if (pageTitle !== originalTitle.replace(/\s{2,}/g, ' ') && pageTitle !== originalTitle)
-                    {
-                        console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
-                        linkEl.textContent = originalTitle;
-                        linkEl.title = originalTitle;
-                    }
+
+                const originalTitle = cachedTitles[curID];
+                const linkEl = links[i].querySelector('#video-title') || links[i]
+                const pageTitle = linkEl.innerText.trim();
+
+                if (originalTitle && pageTitle !== originalTitle.replace(/\s{2,}/g, ' ')
+                    && pageTitle !== originalTitle) {
+                    console.log ("'" + pageTitle + "' --> '" + originalTitle + "'");
+                    linkEl.textContent = originalTitle;
+                    linkEl.title = originalTitle;
                 }
             }
         }

@@ -16,8 +16,8 @@
     /*
     Get a YouTube Data v3 API key from https://console.developers.google.com/apis/library/youtube.googleapis.com?q=YoutubeData
     */
-    var NO_API_KEY = false;
-    var api_key_awaited = await GM.getValue("api_key");
+    let NO_API_KEY = false;
+    let api_key_awaited = await GM.getValue("api_key");
     if(api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === ""){
         await GM.setValue("api_key", prompt("Enter your API key. Go to https://developers.google.com/youtube/v3/getting-started to know how to obtain an API key, then go to https://console.developers.google.com/apis/api/youtube.googleapis.com/ in order to enable Youtube Data API for your key."));
     }
@@ -28,14 +28,14 @@
         console.log("Youtube Auto-translate Canceler: NO API KEY PRESENT");
     }
     const API_KEY = await GM.getValue("api_key");
-    var API_KEY_VALID = false;
+    let API_KEY_VALID = false;
     // console.log(API_KEY);
     console.log("Youtube Auto-translate Canceler: Got API key");
 
-    var url_template = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
+    let url_template = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
 
-    var cachedTitles = {} // Dictionary(id, title): Cache of API fetches, survives only Youtube Autoplay
-    var cachedDescriptions = {} // (id, desc linkified TrustedHTML)
+    let cachedTitles = {} // Dictionary(id, title): Cache of API fetches, survives only Youtube Autoplay
+    let cachedDescriptions = {} // (id, desc linkified TrustedHTML)
 
 
     function getVideoID(a)
@@ -49,15 +49,15 @@
     }
 
     function collectVideoElements() {
-        var links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter( a => {
+        let links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter( a => {
             return a.querySelector('#video-title') || a.id === 'video-title'
         } );
-        var spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter( a => {
+        let spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter( a => {
             return a.id == 'video-title'
                 && !a.className.includes("-radio-")
                 && !a.className.includes("-playlist-");
         } );
-        var homepageTitles = Array
+        let homepageTitles = Array
             .from(document.querySelectorAll('a[href*="/watch"] span[role="text"]'))
             .filter(a => { return a.textContent?.trim().length > 0; });
         links = links.concat(spans);
@@ -71,7 +71,7 @@
     }
 
     async function fetchVideoData(videoIDs) {
-        var requestUrl = url_template.replace("{IDs}", videoIDs.join(','));
+        let requestUrl = url_template.replace("{IDs}", videoIDs.join(','));
 
         // Issue API request
         const data = await fetch(requestUrl).then((r) => r.json());
@@ -178,7 +178,7 @@
 
     // linkify replaces links correctly, but without redirect or other specific youtube stuff (no problem if missing)
     function linkify(inputText) {
-        var replacedText, replacePattern1, replacePattern2, replacePattern3;
+        let replacedText, replacePattern1, replacePattern2, replacePattern3;
 
         //URLs starting with http://, https://, or ftp://
         replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;

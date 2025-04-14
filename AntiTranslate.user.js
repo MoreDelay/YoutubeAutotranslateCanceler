@@ -40,36 +40,31 @@
     let cachedDescriptions = {}
 
 
-    function getVideoID(a) {
+    function videoIdFromUrl(url_string) {
+        const url = new URL(url_string);
+        if (url.pathname.includes("/watch")) {
+            return url.searchParams.get('v') || "";
+        }
+        if (url.pathname.includes("/shorts")) {
+            const splits = url.pathname.split('/');
+            return splits.length >= 3 ? splits[2] : "";
+        }
+        return "";
+    }
+
+    function videoIdFromA(a) {
         while (a.tagName != "A") {
             a = a.parentNode;
         }
         if (!a || !a.href) return null;
-        const match = a.href.match(/v=([^&]+)/);
-        return match ? match[1] : null;
-    }
+        return videoIdFromUrl(a.href); }
 
     function collectVideoElements() {
-        let links = Array.prototype.slice.call(document.getElementsByTagName("a")).filter(a => {
-            return a.querySelector('#video-title') || a.id === 'video-title'
-        });
-        let spans = Array.prototype.slice.call(document.getElementsByTagName("span")).filter(a => {
-            return a.id == 'video-title'
-                && !a.className.includes("-radio-")
-                && !a.className.includes("-playlist-");
-        });
-        let homepageTitles = Array
-            .from(document.querySelectorAll('a[href*="/watch"] span[role="text"]'))
+        let links = Array
+            .from(document.querySelectorAll(
+                'a[href*="/watch"] span[role="text"], a[href*="/shorts"] span[role="text"]'))
             .filter(a => { return a.textContent?.trim().length > 0; });
-        links = links.concat(spans);
-        links = links.concat(homepageTitles);
         return links;
-    }
-
-    function getMainVideoID() {
-        const url = new URL(window.location.href);
-        if (!url.pathname.includes("/watch")) return "";
-        return url.searchParams.get('v') || "";
     }
 
     async function fetchVideoData(videoIDs) {
@@ -108,11 +103,12 @@
     }
 
     function updateMainVideo(mainVidID) {
-        if (!mainVidID || !location.href.includes("/watch?v=")) return;
+        if (!mainVidID) return;
 
         // Replace Main Video title
-        const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
         const untranslatedTitle = cachedTitles[mainVidID]
+
+        const mainTitle = document.querySelector('#title > h1 > yt-formatted-string');
         if (mainTitle
             && untranslatedTitle
             && (mainTitle.innerText !== untranslatedTitle
@@ -120,6 +116,17 @@
             mainTitle.innerText = untranslatedTitle
             mainTitle.title = untranslatedTitle
             mainTitle.removeAttribute('is-empty')
+            document.title = `${untranslatedTitle} - YouTube`
+        }
+
+        const shortsTitle = document.querySelector('#metapanel span[role="text"]');
+        if (shortsTitle
+            && untranslatedTitle
+            && (shortsTitle.innerText !== untranslatedTitle
+                || shortsTitle.getAttribute('is-empty') !== null)) {
+            shortsTitle.innerText = untranslatedTitle
+            shortsTitle.title = untranslatedTitle
+            shortsTitle.removeAttribute('is-empty')
             document.title = `${untranslatedTitle} - YouTube`
         }
 
@@ -136,7 +143,7 @@
     function updateAllLinkTitles(links, IDs) {
         // Change all previously found link elements
         for (let i = 0; i < links.length; i++) {
-            const curID = getVideoID(links[i]);
+            const curID = videoIdFromA(links[i]);
             if (!curID) continue;
 
             if (curID !== IDs[i]) {
@@ -164,14 +171,14 @@
         if (NO_API_KEY) return;
 
         const links = collectVideoElements();
-        const mainVidID = getMainVideoID();
+        const mainVidID = videoIdFromUrl(window.location.href);
 
-        const IDs = [...links.map(a => getVideoID(a)), ...(mainVidID ? [mainVidID] : [])];
+        const IDs = [...links.map(a => videoIdFromA(a)), ...(mainVidID ? [mainVidID] : [])];
         const APIFetchIDs = IDs
             .filter(id => !cachedTitles[id] || !cachedDescriptions[id])
             .slice(0, 30);
 
-        if (links.length == 0) return;
+        if (IDs.length == 0) return;
 
         await fetchVideoData(APIFetchIDs);
 

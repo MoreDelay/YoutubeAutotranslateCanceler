@@ -94,6 +94,8 @@
             if (NO_API_KEY) {
                 console.log("API Key Fail! Please Reload!");
             }
+
+            return;
         }
         API_KEY_VALID = true;
 

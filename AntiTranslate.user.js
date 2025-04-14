@@ -197,12 +197,13 @@
         return replacedText;
     }
 
-    while (true) {
-        try {
-            await changeTitles()
-        } catch {}
+    const observer = new MutationObserver(() => {
+        changeTitles().catch(() => {})
+    });
 
-        await new Promise((r) => setTimeout(r, 1000))
-    }
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
 })();
 

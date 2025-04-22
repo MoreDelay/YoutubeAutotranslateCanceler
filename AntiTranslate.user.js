@@ -43,13 +43,13 @@
     function videoIdFromUrl(url_string) {
         const url = new URL(url_string);
         if (url.pathname.includes("/watch")) {
-            return url.searchParams.get('v') || "";
+            return url.searchParams.get('v') || null;
         }
         if (url.pathname.includes("/shorts")) {
             const splits = url.pathname.split('/');
-            return splits.length >= 3 ? splits[2] : "";
+            return splits.length >= 3 ? splits[2] : null;
         }
-        return "";
+        return null;
     }
 
     function videoIdFromA(a) {
@@ -57,12 +57,16 @@
             a = a.parentNode;
         }
         if (!a || !a.href) return null;
-        return videoIdFromUrl(a.href); }
+        return videoIdFromUrl(a.href);
+    }
 
     function collectVideoElements() {
         let links = Array
             .from(document.querySelectorAll(
-                'a[href*="/watch"] span, a[href*="/shorts"] span'))
+                'a[href*="/watch"] span[role="text"], '
+                + 'a[href*="/watch"] span#video-title, '
+                + 'a[href*="/shorts"] span[role="text"], '
+                + 'a[href*="/shorts"] span#video-title'))
             .filter(a => { return a.textContent?.trim().length > 0; });
         return links;
     }

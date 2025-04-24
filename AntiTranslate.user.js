@@ -63,10 +63,10 @@
     function collectVideoElements() {
         let links = Array
             .from(document.querySelectorAll(
-                'a[href*="/watch"] span[role="text"], '
-                + 'a[href*="/watch"] span#video-title, '
-                + 'a[href*="/shorts"] span[role="text"], '
-                + 'a[href*="/shorts"] span#video-title'))
+                'a[href*="/watch"] [role="text"], '
+                + 'a[href*="/watch"] [id="video-title"], '
+                + 'a[href*="/shorts"] [role="text"], '
+                + 'a[href*="/shorts"] [id="video-title"]'))
             .filter(a => { return a.textContent?.trim().length > 0; });
         return links;
     }

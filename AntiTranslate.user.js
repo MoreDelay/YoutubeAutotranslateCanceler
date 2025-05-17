@@ -165,7 +165,7 @@
             if (pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
                 || pageTitle === originalTitle) continue;
 
-            console.log("'" + pageTitle + "' --> '" + originalTitle + "'");
+            console.log("Revert translation: '" + pageTitle + "' --> '" + originalTitle + "'");
             linkEl.textContent = originalTitle;
             linkEl.title = originalTitle;
         }
@@ -213,8 +213,50 @@
         return replacedText;
     }
 
-    const observer = new MutationObserver(() => {
+    // create a throttled function with a trailing call when requested in the down time
+    // adapted from https://rahultomar092.medium.com/throttling-in-js-with-leading-and-trailing-4a60d5d99122
+    function throttle(func, delay) {
+        let waiting = false;
+        let lastArgs = null;
+        let lastThis = null;
+
+        function startWait() {
+            setTimeout(() => {
+                if (!lastArgs || !lastThis) {
+                    waiting = false;
+                    return;
+                }
+
+                func.apply(lastThis, lastArgs);
+                lastArgs = null;
+                lastThis = null;
+                startWait();
+            }, delay);
+        }
+
+        function wrapper(...args) {
+            if (waiting) {
+                // only keep the latest arguments around for the trailing call
+                lastArgs = args;
+                lastThis = this;
+                return;
+            }
+
+            func.apply(this, args);
+            waiting = true;
+            startWait();
+        };
+
+        return wrapper;
+    }
+
+    // at most one update per second
+    const throttledChangeTitles = throttle(() => {
         changeTitles().catch(() => { })
+    }, 1000);
+
+    const observer = new MutationObserver(() => {
+        throttledChangeTitles()
     });
 
     observer.observe(document.body, {

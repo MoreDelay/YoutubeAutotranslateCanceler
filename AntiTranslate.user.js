@@ -219,10 +219,11 @@
         let waiting = false;
         let lastArgs = null;
         let lastThis = null;
+        let needTrailingCall = false;
 
         function startWait() {
             setTimeout(() => {
-                if (!lastArgs || !lastThis) {
+                if (!needTrailingCall) {
                     waiting = false;
                     return;
                 }
@@ -230,6 +231,7 @@
                 func.apply(lastThis, lastArgs);
                 lastArgs = null;
                 lastThis = null;
+                needTrailingCall = false;
                 startWait();
             }, delay);
         }
@@ -239,6 +241,7 @@
                 // only keep the latest arguments around for the trailing call
                 lastArgs = args;
                 lastThis = this;
+                needTrailingCall = true;
                 return;
             }
 

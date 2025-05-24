@@ -123,6 +123,16 @@
             document.title = `${untranslatedTitle} - YouTube`
         }
 
+        const fullscreenTitle = document.querySelector('.ytp-title a.ytp-title-link');
+        if (fullscreenTitle
+            && untranslatedTitle
+            && (fullscreenTitle.innerText !== untranslatedTitle
+                || fullscreenTitle.getAttribute('is-empty') !== null)) {
+            fullscreenTitle.innerText = untranslatedTitle
+            fullscreenTitle.removeAttribute('is-empty')
+            document.title = `${untranslatedTitle} - YouTube`
+        }
+
         const shortsTitle = document.querySelector('#metapanel span[role="text"]');
         if (shortsTitle
             && untranslatedTitle

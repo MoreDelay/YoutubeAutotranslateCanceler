@@ -99,11 +99,21 @@
         }
         API_KEY_VALID = true;
 
+        const validSet = new Set();
+
         // Create dictionary for all IDs and their original titles
         for (const v of data.items) {
-            cachedTitles[v.id] = v.snippet.title;
+            validSet.add(v.id);
+            cachedTitles[v.id] = v.snippet.title.replace(/^\s+|\s+$/gu, '');
             cachedDescriptions[v.id] = DOMPurify.sanitize(
                 linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
+        }
+
+        for (const id of videoIDs) {
+            if (!validSet.has(id)) {
+                cachedTitles[id] = null;
+                cachedDescriptions[id] = null;
+            }
         }
     }
 
@@ -190,7 +200,7 @@
 
         const IDs = [...links.map(a => videoIdFromA(a)), ...(mainVidID ? [mainVidID] : [])];
         const APIFetchIDs = IDs
-            .filter(id => !cachedTitles[id] || !cachedDescriptions[id])
+            .filter(id => !(id in cachedTitles) || !(id in cachedDescriptions))
             .slice(0, 30);
 
         if (IDs.length == 0) return;

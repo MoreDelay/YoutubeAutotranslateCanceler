@@ -49,6 +49,10 @@
             const splits = url.pathname.split('/');
             return splits.length >= 3 ? splits[2] : null;
         }
+        if (url.pathname.includes("/live")) {
+            const splits = url.pathname.split('/');
+            return splits.length >= 3 ? splits[2] : null;
+        }
         return null;
     }
 
@@ -68,6 +72,7 @@
                 + 'a[href*="/watch"] .ytp-videowall-still-info-title, '
                 + 'a[href*="/shorts"] [role="text"], '
                 + 'a[href*="/shorts"] [id="video-title"], '
+                + 'a[href*="/live"] [role="text"], '
                 + 'a[href*="/watch"][id="video-title"]'
         ))
             .filter(a => { return a.textContent?.trim().length > 0; });

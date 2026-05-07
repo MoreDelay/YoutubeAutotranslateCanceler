@@ -75,7 +75,7 @@
                 + 'a[href*="/shorts"] [id="video-title"], '
                 + 'a[href*="/live"] [role="text"], '
                 + 'a[href*="/watch"][id="video-title"]'
-        ))
+            ))
             .filter(a => { return a.textContent?.trim().length > 0; });
         return links;
     }
@@ -237,10 +237,45 @@
         replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
         replacedText = replacedText.replace(replacePattern3, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="mailto:$1">$1</a>');
 
+        //Put links for timestamps, as YouTube does.
+        const timestampRegex = /\b(?:(\d+):)?([0-5]?\d):([0-5]\d)\b/g;
+        replacedText = replacedText.replace(
+            timestampRegex, (match, hours, minutes, seconds) => {
+                const h = hours ? parseInt(hours, 10) : 0;
+                const m = parseInt(minutes, 10);
+                const s = parseInt(seconds, 10);
+
+                const total = h * 3600 + m * 60 + s;
+                return `<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" href="${window.location.href}&t=${total}" data-anti-translate-timestamp=${total}>${match}</a>`;
+            }
+        );
+
         replacedText = replacedText.replaceAll('\n', '<br />')
 
         return replacedText;
     }
+
+    function timestampCallback(event) {
+        const timestampEvent = event.target.closest("[data-anti-translate-timestamp]");
+        if (!timestampEvent) return;
+
+        // do not reload page
+        event.preventDefault();
+
+        // instead update video playback and scroll to player
+        const seconds = parseInt(timestampEvent.dataset.antiTranslateTimestamp, 10);
+        const video = document.querySelector("video");
+        if (video) {
+            video.currentTime = seconds;
+            video.scrollIntoView({
+                behavior: "smooth",
+                block: "center"
+            });
+        }
+    }
+
+    // register our click event to enable our timestamp click without reloading
+    document.addEventListener("click", (event) => timestampCallback(event))
 
     // create a throttled function with a trailing call when requested in the down time
     // adapted from https://rahultomar092.medium.com/throttling-in-js-with-leading-and-trailing-4a60d5d99122

@@ -227,15 +227,15 @@
 
         //URLs starting with http://, https://, or ftp://
         replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-        replacedText = inputText.replace(replacePattern1, '<a class="yt-core-attributed-string__link yt-core-attributed-string__link--call-to-action-color" spellcheck="false" href="$1">$1</a>');
+        replacedText = inputText.replace(replacePattern1, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="$1">$1</a>');
 
         //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
         replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-        replacedText = replacedText.replace(replacePattern2, '<a class="yt-core-attributed-string__link yt-core-attributed-string__link--call-to-action-color" spellcheck="false" href="http://$1">$1</a>');
+        replacedText = replacedText.replace(replacePattern2, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="http://$1">$1</a>');
 
         //Change email addresses to mailto:: links.
         replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-        replacedText = replacedText.replace(replacePattern3, '<a class="yt-core-attributed-string__link yt-core-attributed-string__link--call-to-action-color" spellcheck="false" href="mailto:$1">$1</a>');
+        replacedText = replacedText.replace(replacePattern3, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="mailto:$1">$1</a>');
 
         replacedText = replacedText.replaceAll('\n', '<br />')
 

@@ -245,9 +245,13 @@
                 const h = hours ? parseInt(hours, 10) : 0;
                 const m = parseInt(minutes, 10);
                 const s = parseInt(seconds, 10);
-
                 const total = h * 3600 + m * 60 + s;
-                return `<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" href="${window.location.href}&t=${total}" data-anti-translate-timestamp=${total}>${match}</a>`;
+
+                const params = new URLSearchParams(window.location.search)
+                params.set("t", total + "s")
+                const href = `${window.location.pathname}?${params.toString()}`
+
+                return `<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" href="${href}" data-anti-translate-timestamp=${total}>${match}</a>`;
             }
         );
 

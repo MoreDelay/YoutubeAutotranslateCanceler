@@ -1,6 +1,9 @@
-✅ As of 2025/03/30, this script works.
+# About this fork
+I rewrote the script to make it more robust against small changes to the YouTube page layout. This should keep this version of the script working for a longer time, which also means I need to come back less frequently to update this script.
 
-You can review [forks of this repo](https://github.com/pcouy/YoutubeAutotranslateCanceler/network) in hope that one of them still works (I would check [the most recently updated fork](https://github.com/adriaan1313/YoutubeAutotranslateCanceler) first)
+You can also check out other [forks of the original repo](https://github.com/pcouy/YoutubeAutotranslateCanceler/network).
+
+---
 
 # YoutubeAutotranslateCanceler
 

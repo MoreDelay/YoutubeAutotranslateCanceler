@@ -16,6 +16,8 @@
     /*
     Get a YouTube Data v3 API key from https://console.developers.google.com/apis/library/youtube.googleapis.com?q=YoutubeData
     */
+    const LOG_PREFIX = "Youtube Auto-translate Canceler: "
+
     let NO_API_KEY = false;
     let api_key_awaited = await GM.getValue("api_key");
     if (api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === "") {
@@ -25,12 +27,12 @@
     api_key_awaited = await GM.getValue("api_key");
     if (api_key_awaited === undefined || api_key_awaited === null || api_key_awaited === "") {
         NO_API_KEY = true; // Resets after page reload, still allows local title to be replaced
-        console.log("Youtube Auto-translate Canceler: NO API KEY PRESENT");
+        console.log(LOG_PREFIX + "NO API KEY PRESENT");
     }
     const API_KEY = await GM.getValue("api_key");
     let API_KEY_VALID = false;
     // console.log(API_KEY);
-    console.log("Youtube Auto-translate Canceler: Got API key");
+    console.log(LOG_PREFIX + "Got API key");
 
     const URL_TEMPLATE = "https://www.googleapis.com/youtube/v3/videos?part=snippet&id={IDs}&key=" + API_KEY;
 
@@ -82,6 +84,7 @@
 
     async function fetchVideoData(videoIDs) {
         if (videoIDs.length === 0) return;
+        console.log(LOG_PREFIX + "Fetching information for " + videoIDs.length + " ids")
 
         const requestUrl = URL_TEMPLATE.replace("{IDs}", videoIDs.join(','));
 
@@ -90,35 +93,32 @@
         try {
             data = await fetch(requestUrl).then((r) => r.json());
         } catch (err) {
-            console.log("Exception while fetching:", err);
+            console.log(LOG_PREFIX + "Exception while fetching:", err);
         }
 
         if (!data || data.kind !== "youtube#videoListResponse") {
-            console.log("API Request Failed!", requestUrl, data);
+            console.log(LOG_PREFIX + "API Request Failed!", requestUrl, data);
 
             // This ensures that occasional fails don't stall the script
             // But if the first query is a fail then it won't try repeatedly
             NO_API_KEY = !API_KEY_VALID;
             if (NO_API_KEY) {
-                console.log("API Key Fail! Please Reload!");
+                console.log(LOG_PREFIX + "API Key Fail! Please Reload!");
             }
 
             return;
         }
         API_KEY_VALID = true;
 
-        const validSet = new Set();
-
         // Create dictionary for all IDs and their original titles
         for (const v of data.items) {
-            validSet.add(v.id);
             cachedTitles[v.id] = v.snippet.title.replace(/^\s+|\s+$/gu, '');
             cachedDescriptions[v.id] = DOMPurify.sanitize(
                 linkify(v.snippet.description), { RETURN_TRUSTED_TYPE: true });
         }
 
         for (const id of videoIDs) {
-            if (!validSet.has(id)) {
+            if (!(id in cachedTitles)) {
                 cachedTitles[id] = null;
                 cachedDescriptions[id] = null;
             }
@@ -181,7 +181,7 @@
 
             if (curID !== IDs[i]) {
                 // Can happen when Youtube was still loading when script was invoked
-                console.log("YouTube was too slow again...");
+                console.log(LOG_PREFIX + "YouTube was too slow again...");
                 continue;
             }
 
@@ -191,10 +191,11 @@
             const linkEl = links[i].querySelector('#video-title') || links[i]
             const pageTitle = linkEl.innerText.trim();
 
-            if (pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
+            if (!pageTitle
+                || pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
                 || pageTitle === originalTitle) continue;
 
-            console.log("Revert translation: '" + pageTitle + "' --> '" + originalTitle + "'");
+            console.log(LOG_PREFIX + "Revert translation: '" + pageTitle + "' --> '" + originalTitle + "'");
             linkEl.textContent = originalTitle;
             linkEl.title = originalTitle;
         }
@@ -206,12 +207,12 @@
         const links = collectVideoElements();
         const mainVidID = videoIdFromUrl(window.location.href);
 
-        const IDs = [...links.map(a => videoIdFromA(a)), ...(mainVidID ? [mainVidID] : [])];
-        const APIFetchIDs = IDs
+        const IDs = links.map(a => videoIdFromA(a));
+        if (IDs.length == 0) return;
+
+        const APIFetchIDs = [...IDs, ... (mainVidID ? [mainVidID] : [])]
             .filter(id => !(id in cachedTitles) || !(id in cachedDescriptions))
             .slice(0, 30);
-
-        if (IDs.length == 0) return;
 
         await fetchVideoData(APIFetchIDs);
 

@@ -83,6 +83,8 @@
     }
 
     async function fetchVideoData(videoIDs) {
+        if (NO_API_KEY) return;
+
         if (videoIDs.length === 0) return;
         console.log(LOG_PREFIX + "Fetching information for " + videoIDs.length + " ids")
 
@@ -195,30 +197,26 @@
                 || pageTitle === originalTitle.replace(/\s{2,}/g, ' ')
                 || pageTitle === originalTitle) continue;
 
-            console.log(LOG_PREFIX + "Revert translation: '" + pageTitle + "' --> '" + originalTitle + "'");
+            console.log(LOG_PREFIX + "Revert translation: '" + pageTitle + "' --> '" + originalTitle + "' (" + curID + ")");
             linkEl.textContent = originalTitle;
             linkEl.title = originalTitle;
         }
     }
 
     async function changeTitles() {
-        if (NO_API_KEY) return;
-
         const links = collectVideoElements();
-        const mainVidID = videoIdFromUrl(window.location.href);
+        const mainVideoId = videoIdFromUrl(window.location.href);
 
-        const IDs = links.map(a => videoIdFromA(a));
-        if (IDs.length == 0) return;
-
-        const APIFetchIDs = [...IDs, ... (mainVidID ? [mainVidID] : [])]
+        const linkIds = links.map(a => videoIdFromA(a));
+        const fetchIds = [...linkIds, ... (mainVideoId ? [mainVideoId] : [])]
             .filter(id => !(id in cachedTitles) || !(id in cachedDescriptions))
             .slice(0, 30);
 
-        await fetchVideoData(APIFetchIDs);
+        await fetchVideoData(fetchIds);
 
         // Begin to update the DOM
-        updateMainVideo(mainVidID);
-        updateAllLinkTitles(links, IDs);
+        updateMainVideo(mainVideoId);
+        updateAllLinkTitles(links, linkIds);
     }
 
     // linkify replaces links correctly, but without redirect or other specific youtube

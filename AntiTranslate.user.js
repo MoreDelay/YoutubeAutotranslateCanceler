@@ -73,6 +73,7 @@
                 + 'a[href*="/watch"] [id="video-title"], '
                 + 'a[href*="/watch"] .ytp-ce-video-title, '
                 + 'a[href*="/watch"] .ytp-videowall-still-info-title, '
+                + 'a[href*="/watch"] .ytp-modern-videowall-still-info-title, '
                 + 'a[href*="/shorts"] [role="text"], '
                 + 'a[href*="/shorts"] [id="video-title"], '
                 + 'a[href*="/live"] [role="text"], '

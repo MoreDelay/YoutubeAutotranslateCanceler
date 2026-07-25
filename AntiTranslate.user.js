@@ -222,21 +222,21 @@
     // linkify replaces links correctly, but without redirect or other specific youtube
     // stuff (no problem if missing)
     function linkify(inputText) {
-        let replacedText, replacePattern1, replacePattern2, replacePattern3;
+        let replacedText = inputText;
 
-        //URLs starting with http://, https://, or ftp://
-        replacePattern1 = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
-        replacedText = inputText.replace(replacePattern1, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="$1">$1</a>');
+        // URLs starting with http://, https://, or ftp://
+        const httpLinkRegex = /(\b(https?|ftp):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gim;
+        replacedText = replacedText.replace(httpLinkRegex, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="$1">$1</a>');
 
-        //URLs starting with "www." (without // before it, or it'd re-link the ones done above).
-        replacePattern2 = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
-        replacedText = replacedText.replace(replacePattern2, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="http://$1">$1</a>');
+        // URLs starting with "www." (without // before it, or it'd re-link the ones done above).
+        const wwwLinkRegex = /(^|[^\/])(www\.[\S]+(\b|$))/gim;
+        replacedText = replacedText.replace(wwwLinkRegex, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="http://$1">$1</a>');
 
-        //Change email addresses to mailto:: links.
-        replacePattern3 = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
-        replacedText = replacedText.replace(replacePattern3, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="mailto:$1">$1</a>');
+        // Change email addresses to mailto:: links.
+        const mailRegex = /(([a-zA-Z0-9\-\_\.])+@[a-zA-Z\_]+?(\.[a-zA-Z]{2,6})+)/gim;
+        replacedText = replacedText.replace(mailRegex, '<a class="ytAttributedStringLink ytAttributedStringLinkCallToActionColor" tabindex="0" rel="nofollow" href="mailto:$1">$1</a>');
 
-        //Put links for timestamps, as YouTube does.
+        // Put links for timestamps, as YouTube does.
         const timestampRegex = /\b(?:(\d+):)?([0-5]?\d):([0-5]\d)\b/g;
         replacedText = replacedText.replace(
             timestampRegex, (match, hours, minutes, seconds) => {
@@ -259,14 +259,14 @@
     }
 
     function timestampCallback(event) {
-        const timestampEvent = event.target.closest("[data-anti-translate-timestamp]");
-        if (!timestampEvent) return;
+        const timestampElem = event.target.closest("[data-anti-translate-timestamp]");
+        if (!timestampElem) return;
 
         // do not reload page
         event.preventDefault();
 
         // instead update video playback and scroll to player
-        const seconds = parseInt(timestampEvent.dataset.antiTranslateTimestamp, 10);
+        const seconds = parseInt(timestampElem.dataset.antiTranslateTimestamp, 10);
         const video = document.querySelector("video");
         if (video) {
             video.currentTime = seconds;
